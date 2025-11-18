@@ -17,9 +17,16 @@ import os
 import argparse
 import logging
 from pathlib import Path
-
+import datetime
 
 logger = logging.getLogger("hybrid_destiny_workflow")
+
+DEBUG = True
+def debug_print(message):
+    if DEBUG:
+        print(message)
+    else:
+        debug_print(message)
 
 def run_cpp_destiny(config_file_name: str, output_file_name: str) -> int:
     """
@@ -43,13 +50,11 @@ def run_cpp_destiny(config_file_name: str, output_file_name: str) -> int:
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     old_cwd = os.getcwd()
-    logger.info(f"=" * 80)
-    logger.info(f"STEP 1: Running C++ DESTINY for Design Space Exploration")
-    logger.info(f"=" * 80)
-    logger.info(f"\nConfiguration: {config_file_name}")
-    logger.info(f"Output file: {output_file_name}")
-    logger.info(f"\nThis may take several minutes as C++ DESTINY explores the design space...")
-    logger.info(f"(Finding optimal configuration for cache organization)\n")
+    debug_print(f"=" * 80)
+    debug_print(f"STEP 1: Running C++ DESTINY for Design Space Exploration")
+    debug_print(f"=" * 80)
+    debug_print(f"\nConfiguration: {config_file_name}")
+    debug_print(f"Output file: {output_file_name}")
 
     os.chdir(config_folder)
 
@@ -59,7 +64,7 @@ def run_cpp_destiny(config_file_name: str, output_file_name: str) -> int:
     cmd = [cpp_destiny_path, config_file_path]
 
     try:
-        logger.info(f"Running command: {cmd} from {os.getcwd()}")
+        debug_print(f"Running command: {cmd} from {os.getcwd()}")
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -72,21 +77,21 @@ def run_cpp_destiny(config_file_name: str, output_file_name: str) -> int:
         # Write output to file while also displaying it
         with open(output_file_path, 'w') as f:
             for line in process.stdout:
-                logger.info(fline, end='')  # Display in real-time
+                debug_print(f"{line}")  # Display in real-time
                 f.write(line)  # Save to file
         
         process.wait()
         if process.returncode != 0:
             raise subprocess.CalledProcessError(process.returncode, cmd)
         
-        logger.info(f"\n✓ C++ DESTINY DSE completed successfully!")
-        logger.info(f"  Optimal configuration saved to: {output_file_path}")
+        debug_print(f"\n✓ C++ DESTINY DSE completed successfully!")
+        debug_print(f"  Optimal configuration saved to: {output_file_path}")
         return 0
     except subprocess.CalledProcessError as e:
-        logger.info(f"\n✗ C++ DESTINY failed with error code {e.returncode}")
+        print(f"\n✗ C++ DESTINY failed with error code {e.returncode}")
         return e.returncode
     except FileNotFoundError:
-        logger.info(f"\n✗ C++ DESTINY executable not found: {cpp_destiny_path}")
+        print(f"\n✗ C++ DESTINY executable not found: {cpp_destiny_path}")
         return 1
     finally:
         os.chdir(old_cwd)
@@ -104,19 +109,20 @@ def run_python_symbolic_analysis(cpp_output_file_name: str, config_file_name: st
     Returns:
         Return code (0 = success)
     """
-    python_script_path = os.path.join(os.path.dirname(__file__), "destiny_3d_cache_python", python_script)
+    destiny_python_path = os.path.join(os.path.dirname(__file__), "destiny_3d_cache_python")
+    python_script_path = os.path.join(os.path.dirname(__file__), "destiny_3d_cache_python/scripts", python_script)
     config_folder = os.path.join(os.path.dirname(__file__), "destiny_3d_cache/config")
     config_file_path = os.path.join(config_folder, config_file_name)
     cpp_output_folder = os.path.join(os.path.dirname(__file__), "destiny_3d_cache/output")
     cpp_output_file_path = os.path.join(cpp_output_folder, cpp_output_file_name)
     old_cwd = os.getcwd()
-    logger.info(f"\n" + "=" * 80)
-    logger.info(f"STEP 2: Running Python DESTINY for Symbolic Analysis")
-    logger.info(f"=" * 80)
-    logger.info(f"\nUsing optimal configuration from: {cpp_output_file_path}")
-    logger.info(f"Computing symbolic expressions for memory access time...\n")
+    debug_print(f"\n" + "=" * 80)
+    debug_print(f"STEP 2: Running Python DESTINY for Symbolic Analysis")
+    debug_print(f"=" * 80)
+    debug_print(f"\nUsing optimal configuration from: {cpp_output_file_path}")
+    debug_print(f"Computing symbolic expressions for memory access time...")
 
-    os.chdir(os.path.dirname(python_script_path))
+    os.chdir(destiny_python_path)
 
     cmd = ["python", python_script_path, cpp_output_file_path, config_file_path]
 
@@ -127,14 +133,8 @@ def run_python_symbolic_analysis(cpp_output_file_name: str, config_file_name: st
             capture_output=False,
             text=True
         )
-        logger.info(f"\n✓ Python DESTINY symbolic analysis completed!")
+        debug_print(f"\n✓ Python DESTINY symbolic analysis completed!")
         return 0
-    except subprocess.CalledProcessError as e:
-        logger.info(f"\n✗ Python DESTINY failed with error code {e.returncode}")
-        return e.returncode
-    except FileNotFoundError:
-        logger.info(f"\n✗ Python script not found: {python_script_path}")
-        return 1
     finally:
         os.chdir(old_cwd)
 
@@ -170,15 +170,8 @@ Notes:
     parser.add_argument(
         "-c", "--config",
         type=str,
-        required=True,
-        help="Configuration file name (e.g., sample_SRAM_2layer.cfg)"
-    )
-
-    parser.add_argument(
-        "--cpp-destiny",
-        type=str,
-        default="destiny_3d_cache-master/destiny",
-        help="Path to C++ DESTINY executable (default: destiny_3d_cache-master/destiny)"
+        help="Configuration file name (e.g., sample_SRAM_2layer.cfg)",
+        default="sample_SRAM_2layer.cfg",
     )
 
     parser.add_argument(
@@ -203,53 +196,54 @@ Notes:
 
     args = parser.parse_args()
 
-    this_run_log_dir = os.path.join(args.log_dir, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-
+    this_run_log_dir = os.path.join(os.path.dirname(__file__), "..", args.log_dir, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    if not os.path.exists(this_run_log_dir):
+        os.makedirs(this_run_log_dir)
     logging.basicConfig(filename=os.path.join(this_run_log_dir, "hybrid_destiny_workflow.log"), level=logging.INFO)
 
-    logger.info(f"\n")
-    logger.info(f"╔" + "=" * 78 + "╗")
-    logger.info(f"║" + " " * 15 + "Hybrid C++ DESTINY + Python DESTINY Workflow" + " " * 18 + "║")
-    logger.info(f"╚" + "=" * 78 + "╝")
+    debug_print(f"\n")
+    debug_print(f"╔" + "=" * 78 + "╗")
+    debug_print(f"║" + " " * 15 + "Hybrid C++ DESTINY + Python DESTINY Workflow" + " " * 18 + "║")
+    debug_print(f"╚" + "=" * 78 + "╝")
 
-    logger.info(f"\nWorkflow:")
-    logger.info(f"  1. C++ DESTINY performs Design Space Exploration (DSE)")
-    logger.info(f"  2. Extracts optimal configuration from DSE results")
-    logger.info(f"  3. Python DESTINY computes symbolic expressions for access time")
-    logger.info(f"  4. Performs sensitivity analysis on symbolic expressions")
+    debug_print(f"\nWorkflow:")
+    debug_print(f"  1. C++ DESTINY performs Design Space Exploration (DSE)")
+    debug_print(f"  2. Extracts optimal configuration from DSE results")
+    debug_print(f"  3. Python DESTINY computes symbolic expressions for access time")
+    debug_print(f"  4. Performs sensitivity analysis on symbolic expressions")
 
     # Step 1: Run C++ DESTINY (unless skipped)
     if not args.skip_cpp:
         ret = run_cpp_destiny(args.config, args.output)
         if ret != 0:
-            logger.info(f"\n✗ Workflow failed at C++ DESTINY stage")
+            debug_print(f"\n✗ Workflow failed at C++ DESTINY stage")
             return ret
     else:
-        logger.info(f"\n⚠ Skipping C++ DESTINY (using existing output)")
+        debug_print(f"\n⚠ Skipping C++ DESTINY (using existing output)")
         output_file_path = os.path.join(os.path.dirname(__file__), "destiny_3d_cache/output", args.output)
         if not os.path.exists(output_file_path):
-            logger.info(f"✗ Output file not found: {output_file_path}")
+            debug_print(f"✗ Output file not found: {output_file_path}")
             return 1
 
     # Step 2: Run Python DESTINY symbolic analysis
     ret = run_python_symbolic_analysis(args.output, args.config, args.python_script)
     if ret != 0:
-        logger.info(f"\n✗ Workflow failed at Python DESTINY stage")
+        debug_print(f"\n✗ Workflow failed at Python DESTINY stage")
         return ret
 
     # Success!
-    logger.info(f"\n" + "=" * 80)
-    logger.info(f"✓ HYBRID WORKFLOW COMPLETED SUCCESSFULLY!")
-    logger.info(f"=" * 80)
-    logger.info(f"\nOutputs:")
-    logger.info(f"  • C++ DESTINY results: {args.output}")
-    logger.info(f"  • Symbolic expressions: Printed above")
-    logger.info(f"\nNext Steps:")
-    logger.info(f"  • Use symbolic expressions for design space analysis")
-    logger.info(f"  • Perform parameter sweeps with different technology nodes")
-    logger.info(f"  • Compute derivatives for sensitivity analysis")
-    logger.info(f"  • Generate optimization constraints")
-    logger.info(f"=" * 80 + "\n")
+    debug_print(f"\n" + "=" * 80)
+    debug_print(f"✓ HYBRID WORKFLOW COMPLETED SUCCESSFULLY!")
+    debug_print(f"=" * 80)
+    debug_print(f"\nOutputs:")
+    debug_print(f"  • C++ DESTINY results: {args.output}")
+    debug_print(f"  • Symbolic expressions: Printed above")
+    debug_print(f"\nNext Steps:")
+    debug_print(f"  • Use symbolic expressions for design space analysis")
+    debug_print(f"  • Perform parameter sweeps with different technology nodes")
+    debug_print(f"  • Compute derivatives for sensitivity analysis")
+    debug_print(f"  • Generate optimization constraints")
+    debug_print(f"=" * 80 + "\n")
 
     return 0
 
