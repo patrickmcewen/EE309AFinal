@@ -1,0 +1,12 @@
+name: EE309AFinal
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy>=1.24
+  - sympy>=1.12
+  - matplotlib>=3.8        # only if you plan to run the plotting examples
+  - pytest>=8.2            # optional, for running tests
+  - pip
+  - pip:
+      - scipy>=1.11        # optional, needed for optimization demos
