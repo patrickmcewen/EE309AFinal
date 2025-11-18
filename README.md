@@ -12,6 +12,7 @@ source env_start.sh
 cd src
 python hybrid_destiny_workflow.py \
   --config destiny_3d_cache/config/sample_SRAM_2layer.cfg \
-  --output hybrid_output.txt \
-  --python-script symbolic_access_time_FIXED.py
+  [--output <output_file_name>] \
+  [--python-script symbolic_access_time_FIXED.py] \
+  [--skip-cpp]
 ```
