@@ -202,9 +202,9 @@ Notes:
     logging.basicConfig(filename=os.path.join(this_run_log_dir, "hybrid_destiny_workflow.log"), level=logging.INFO)
 
     debug_print(f"\n")
-    debug_print(f"╔" + "=" * 78 + "╗")
-    debug_print(f"║" + " " * 15 + "Hybrid C++ DESTINY + Python DESTINY Workflow" + " " * 18 + "║")
-    debug_print(f"╚" + "=" * 78 + "╝")
+    debug_print(f"=" * 80)
+    debug_print(f"| " + " " * 15 + "Hybrid C++ DESTINY + Python DESTINY Workflow" + " " * 18 + "|")
+    debug_print(f"=" * 80)
 
     debug_print(f"\nWorkflow:")
     debug_print(f"  1. C++ DESTINY performs Design Space Exploration (DSE)")
@@ -212,37 +212,30 @@ Notes:
     debug_print(f"  3. Python DESTINY computes symbolic expressions for access time")
     debug_print(f"  4. Performs sensitivity analysis on symbolic expressions")
 
+    output_file_name = args.output.replace(".txt", f"_{args.config.replace('.cfg', '')}.txt")
+
     # Step 1: Run C++ DESTINY (unless skipped)
     if not args.skip_cpp:
-        ret = run_cpp_destiny(args.config, args.output)
+        ret = run_cpp_destiny(args.config, output_file_name)
         if ret != 0:
-            debug_print(f"\n✗ Workflow failed at C++ DESTINY stage")
+            debug_print(f"\nWorkflow failed at C++ DESTINY stage")
             return ret
     else:
-        debug_print(f"\n⚠ Skipping C++ DESTINY (using existing output)")
-        output_file_path = os.path.join(os.path.dirname(__file__), "destiny_3d_cache/output", args.output)
+        debug_print(f"\nSkipping C++ DESTINY (using existing output)")
+        output_file_path = os.path.join(os.path.dirname(__file__), "destiny_3d_cache/output", output_file_name)
         if not os.path.exists(output_file_path):
-            debug_print(f"✗ Output file not found: {output_file_path}")
+            debug_print(f"Output file not found: {output_file_path}")
             return 1
 
     # Step 2: Run Python DESTINY symbolic analysis
-    ret = run_python_symbolic_analysis(args.output, args.config, args.python_script)
+    ret = run_python_symbolic_analysis(output_file_name, args.config, args.python_script)
     if ret != 0:
-        debug_print(f"\n✗ Workflow failed at Python DESTINY stage")
+        debug_print(f"\nWorkflow failed at Python DESTINY stage")
         return ret
 
     # Success!
     debug_print(f"\n" + "=" * 80)
-    debug_print(f"✓ HYBRID WORKFLOW COMPLETED SUCCESSFULLY!")
-    debug_print(f"=" * 80)
-    debug_print(f"\nOutputs:")
-    debug_print(f"  • C++ DESTINY results: {args.output}")
-    debug_print(f"  • Symbolic expressions: Printed above")
-    debug_print(f"\nNext Steps:")
-    debug_print(f"  • Use symbolic expressions for design space analysis")
-    debug_print(f"  • Perform parameter sweeps with different technology nodes")
-    debug_print(f"  • Compute derivatives for sensitivity analysis")
-    debug_print(f"  • Generate optimization constraints")
+    debug_print(f"HYBRID WORKFLOW COMPLETED SUCCESSFULLY!")
     debug_print(f"=" * 80 + "\n")
 
     return 0
