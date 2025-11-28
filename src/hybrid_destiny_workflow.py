@@ -18,8 +18,20 @@ import argparse
 import logging
 from pathlib import Path
 import datetime
+import pyomo.environ as pyo
 
 logger = logging.getLogger("hybrid_destiny_workflow")
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "destiny_3d_cache_python/scripts"))
+
+import preprocess
+from destiny_3d_cache_python.scripts.symbolic_access_time_FIXED import run_python_destiny_calculation
+from destiny_3d_cache_python.scripts.symbolic_access_time_FIXED import compare_results
+from destiny_3d_cache_python.scripts.symbolic_access_time_FIXED import compute_sensitivity
+from destiny_3d_cache_python.scripts.parse_cpp_output import parse_cpp_destiny_output
+
+
+symbol_table = {}
 
 DEBUG = True
 def debug_print(message):
@@ -27,6 +39,47 @@ def debug_print(message):
         print(message)
     else:
         debug_print(message)
+
+def init_symbol_table(param_values):
+    for key in param_values:
+        symbol_table[key.name] = key
+
+def parse_ipopt_output(f, param_values):
+    """
+    Parses the output file from the optimizer in the inverse pass, mapping variable names to
+    technology parameters and updating them accordingly.
+
+    Args:
+        f (file-like): Opened file object containing the output to parse.
+
+    Returns:
+        None
+    """
+    lines = f.readlines()
+    mapping = {}
+    max_ind = 0
+    i = 0
+    while lines[i][0] != "x":
+        i += 1
+    while lines[i][0] == "x":
+        mapping[lines[i][lines[i].find("[") + 1 : lines[i].find("]")]] = (
+            symbol_table[lines[i].split(" ")[-1][:-1]]
+        )
+        max_ind = int(lines[i][lines[i].find("[") + 1 : lines[i].find("]")])
+        i += 1
+    while i < len(lines) and lines[i].find("x") != 4:
+        i += 1
+    i += 2
+    #print(f"mapping: {mapping}, max_ind: {max_ind}")
+    for _ in range(max_ind):
+        key = lines[i].split(":")[0].lstrip().rstrip()
+        value = float(lines[i].split(":")[2][1:-1])
+        if key in mapping:
+            #print(f"key: {key}; mapping: {mapping[key]}; value: {value}")
+            param_values[mapping[key]] = (
+                value
+            )
+        i += 1
 
 def run_cpp_destiny(config_file_name: str, output_file_name: str) -> int:
     """
@@ -124,19 +177,44 @@ def run_python_symbolic_analysis(cpp_output_file_name: str, config_file_name: st
 
     os.chdir(destiny_python_path)
 
-    cmd = ["python", python_script_path, cpp_output_file_path, config_file_path]
+    
 
-    try:
-        result = subprocess.run(
-            cmd,
-            check=True,
-            capture_output=False,
-            text=True
-        )
-        debug_print(f"\n✓ Python DESTINY symbolic analysis completed!")
-        return 0
-    finally:
-        os.chdir(old_cwd)
+    opt_config = parse_cpp_destiny_output(cpp_output_file_path)
+    subarray, bank = run_python_destiny_calculation(opt_config, config_file_path)
+    compare_results(subarray, bank, opt_config)
+    compute_sensitivity(subarray, bank, opt_config)
+    init_symbol_table(bank.readLatency.val_map)
+    return run_ipopt_optimization(bank.readLatency.symbolic, {}, bank.readLatency.val_map)
+
+def run_ipopt_optimization(obj, constraints, initial_values) -> int:
+    """
+    Run IPOPT optimization
+    """
+    debug_print(f"\n" + "=" * 80)
+    debug_print(f"STEP 3: Running IPOPT Optimization")
+    debug_print(f"=" * 80)
+    ipopt_path = os.path.join(os.path.dirname(__file__), "ipopt_out.txt")
+    stdout = sys.stdout
+    with open(ipopt_path, 'w') as sys.stdout:
+        model = pyo.ConcreteModel()
+        model_out_file = os.path.join(os.path.dirname(__file__), "solver_out.txt")
+        preprocessor = preprocess.Preprocessor(initial_values, out_file=model_out_file)
+        opt, scaled_model, model, multistart_options = preprocessor.begin(model, obj, 2, False, constraints)
+        results = opt.solve(scaled_model, tee=True)
+        if results.solver.termination_condition not in ["optimal", "acceptable", "infeasible", "maxIterations"]:
+            raise Exception(f"IPOPT optimization failed with termination condition: {results.solver.termination_condition}")
+        pyo.TransformationFactory("core.scale_model").propagate_solution(scaled_model, model)
+        model.display()
+    sys.stdout = stdout
+    prev_initial_values = initial_values.copy()
+    with open(ipopt_path, 'r') as f:
+        parse_ipopt_output(f, initial_values)
+    
+    debug_print(f"\nprinting values that changed during optimization:\n")
+    for key in initial_values:
+        if initial_values[key] != prev_initial_values[key]:
+            debug_print(f"{key}: {prev_initial_values[key]} -> {initial_values[key]}")
+    return 0
 
 def main():
     """Main workflow orchestrator"""
