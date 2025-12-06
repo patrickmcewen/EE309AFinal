@@ -1,0 +1,256 @@
+
+
+================================================================================
+|                Hybrid C++ DESTINY + Python DESTINY Workflow                  |
+================================================================================
+
+Workflow:
+  1. C++ DESTINY performs Design Space Exploration (DSE)
+  2. Extracts optimal configuration from DSE results
+  3. Python DESTINY computes symbolic expressions for access time
+  4. Performs sensitivity analysis on symbolic expressions
+
+Skipping C++ DESTINY (using existing output)
+
+================================================================================
+STEP 2: Running Python DESTINY for Symbolic Analysis
+================================================================================
+
+Using optimal configuration from: /scratch/patrick/EE309AFinal/src/destiny_3d_cache/output/hybrid_output_sample_2DReRAM.txt
+Computing symbolic expressions for memory access time...
+Warning: No TSV latency found in C++ DESTINY output
+Warning: No cell type found in C++ DESTINY output
+Warning: No cell area found in C++ DESTINY output
+Warning: No cell aspect ratio found in C++ DESTINY output
+================================================================================
+OPTIMAL CONFIGURATION FROM C++ DESTINY DSE
+================================================================================
+
+Bank Organization:
+  Banks (X x Y x Stacks): 2 x 1 x None
+
+Mat Organization:
+  Mats (X x Y): 2 x 2
+
+Subarray:
+  Size: 512 Rows x 2048 Columns
+
+Mux Levels:
+  Senseamp Mux: 32
+  Output L1 Mux: 1
+  Output L2 Mux: 1
+
+Timing Breakdown (from C++ DESTINY):
+  Total Read Latency: 10.491 ns
+    H-Tree Latency: 6.302 ps
+    Mat Latency: 10.485 ns
+      Predecoder: 549.951 ps
+      Subarray: 9.935 ns
+        Row Decoder: 3.329 ns
+        Bitline: 0.003 ns
+        Senseamp: 480.873 ps
+        Mux: 165.136 ps
+
+Cell Parameters:
+  Type: None
+  Area: None F^2
+  Aspect Ratio: None
+================================================================================
+
+================================================================================
+RUNNING PYTHON DESTINY WITH OPTIMAL CONFIGURATION
+================================================================================
+
+Configuration:
+  Process Node: 180 nm
+  Device Roadmap: 0
+  Subarray: 512 rows × 2048 cols
+gate length: 1e-07
+V_th_eff: 0.29703455416513946
+Ieff_n/Wg: 180.41983830668795
+Ieff_p/Wg: 59.76010438962158
+Ioff_n/Wg: 0.0015329649948842292
+Ioff_p/Wg: 0.00048581083785000236
+gate length: 1e-07
+V_th_eff: 0.29703455416513946
+Ieff_n/Wg: 180.41983830668795
+Ieff_p/Wg: 59.76010438962158
+Ioff_n/Wg: 0.0015329649948842292
+Ioff_p/Wg: 0.00048581083785000236
+gate length: 1e-07
+V_th_eff: 0.29703455416513946
+Ieff_n/Wg: 180.41983830668795
+Ieff_p/Wg: 59.76010438962158
+Ioff_n/Wg: 0.0015329649948842292
+Ioff_p/Wg: 0.00048581083785000236
+  Memory Cell: 5
+  Subarray: 512 rows × 2048 cols
+
+Calculating subarray performance...
+
+Debug info before latency calculation:
+  Wire configuration check:
+    g.localWire exists: True
+    g.globalWire exists: True
+    localWire.capWirePerUnit: 3.6948175e-10
+    localWire.resWirePerUnit: 265896.05663884827
+bank.readLatency type: <class 'sympy.core.add.Add'>
+
+================================================================================
+COMPARISON: PYTHON vs C++ DESTINY
+================================================================================
+
+HIERARCHY SUMMARY (C++ CONFIG):
+   Bank Organization : 2 × 1 × 1
+     Row Activation   : 1 / 2
+     Column Activation: 1 / 1
+   Mat Organization  : 2 × 2
+     Row Activation   : 1 / 2
+     Column Activation: 1 / 2
+   Subarray Size     : 512 Rows × 2048 Columns
+
+BANK-LEVEL TIMING (Python vs C++):
+   Total Read Latency :    3.056 ns (SymPy) :    3.056 ns (Py) |   10.491 ns (C++)
+   Total Write Latency:   11.247 ns (SymPy) :   11.247 ns (Py) |   18.111 ns (C++)
+   H-Tree Latency      5.504 ps (SymPy) :    5.504 ps (Py) |    6.302 ps (C++)
+   Mat Latency         3.051 ns (SymPy) :    3.051 ns (Py) |   10.485 ns (C++)
+     Predecoder       1006.621 ps (SymPy) : 1006.621 ps (Py) |  549.951 ps (C++)
+     Subarray            2.044 ns (SymPy) :    2.044 ns (Py) |    9.935 ns (C++)
+        Row Decoder        0.798 ns (SymPy) :    0.798 ns (Py) |    3.329 ns (C++)
+        Bitline            0.002 ns (SymPy) :    0.002 ns (Py) |    0.003 ns (C++)
+        Sense Amp        475.091 ps (SymPy) :  475.091 ps (Py) |  480.873 ps (C++)
+        Mux              651.128 ps (SymPy) :  651.128 ps (Py) |  165.136 ps (C++)
+
+BANK AREA (Python only):
+   Bank Area         :    3.016 mm²
+   Mat Area          :    1.508 mm²
+   Subarray Area     :    0.363 mm²
+   Dimensions        :    1.341 mm ×    2.249 mm
+
+================================================================================
+BANK-LEVEL POWER (Python vs C++ DESTINY)
+================================================================================
+   Component                    SymPy Unit    Python Unit       C++ Unit      Diff Unit
+   Read Dynamic Energy         56.816 pJ      56.816 pJ      71.831 pJ      15.015 pJ  
+   Write Dynamic Energy        38.753 pJ      38.753 pJ     103.051 pJ      64.298 pJ  
+   Refresh Dynamic Energy  103308.937 pJ  103308.937 pJ         N/A pJ         N/A pJ  
+   Reset Dynamic Energy        42.910 pJ      42.910 pJ         N/A pJ         N/A pJ  
+   Set Dynamic Energy          33.249 pJ      33.249 pJ         N/A pJ         N/A pJ  
+   Routing Read Energy         20.544 pJ      20.544 pJ      19.409 pJ       1.135 pJ  
+   Routing Write Energy        20.544 pJ      20.544 pJ      19.409 pJ       1.135 pJ  
+   Leakage Power                0.355 mW       0.355 mW       0.956 mW       0.601 mW  
+
+================================================================================
+COMPUTING SENSITIVITY OF THE ACCESS TIME TO THE PARAMETERS
+================================================================================
+display all symbolic variables and their values
+ effectiveElectronMobility_tech_peripheral: 0.032
+ effectiveHoleMobility_tech_peripheral: 0.008
+ vth_tech_peripheral: 0.3
+ M_tech_peripheral: 2.0
+ capFringe_tech_peripheral: 2.5e-10
+ wirePitch_globalWire: 9.45e-07
+ horizontalDielectric_globalWire: 3.75
+ phyGateLength_tech_peripheral: 1e-07
+ barrierThickness_globalWire: 1.6e-08
+ FO_tech_peripheral: 4.0
+ vdd_tech_peripheral: 1.5
+ aspectRatio_localWire: 2.4
+ barrierThickness_localWire: 1.6e-08
+ effectiveResistanceMultiplier_tech_peripheral: 1.54
+ eps_gox_tech_peripheral: 3.9
+ Wg_tech_peripheral: 1.2e-07
+ ildThickness_localWire: 1e-06
+ wirePitch_localWire: 4.5e-07
+ tgox_tech_peripheral: 3.453133249332e-09
+ ildThickness_globalWire: 2e-06
+ aspectRatio_globalWire: 2.1
+ horizontalDielectric_localWire: 3.75
+ mD_fac_tech_peripheral: 0.5
+ eps_cap_tech_peripheral: 3.9
+ pnSizeRatio_tech_peripheral: 2.45
+ Lext_tech_peripheral: 1e-08
+--------------------------------
+ start with read latency
+ top read sensitivities (absolute value) (normalized to current parameter value)
+ capFringe_tech_peripheral: 3.645e-1
+ tgox_tech_peripheral: 8.310e-1
+ barrierThickness_localWire: 3.271e-3
+ wirePitch_localWire: -3.058e-2
+ barrierThickness_globalWire: 1.603e-4
+ ildThickness_localWire: -6.011e-3
+ wirePitch_globalWire: -3.675e-3
+ phyGateLength_tech_peripheral: -2.582e-4
+ Lext_tech_peripheral: -2.001e-6
+ ildThickness_globalWire: -8.627e-5
+ Wg_tech_peripheral: 3.289e-6
+ effectiveResistanceMultiplier_tech_peripheral: 8.261e-1
+ vdd_tech_peripheral: 6.439e-1
+ effectiveHoleMobility_tech_peripheral: -3.247e-3
+ eps_gox_tech_peripheral: -8.310e-1
+ effectiveElectronMobility_tech_peripheral: 3.508e-3
+ pnSizeRatio_tech_peripheral: 2.196e-1
+ mD_fac_tech_peripheral: -2.818e-2
+ aspectRatio_localWire: 7.530e-2
+ horizontalDielectric_localWire: 9.247e-2
+ vth_tech_peripheral: 8.116e-4
+ aspectRatio_globalWire: -7.241e-4
+ horizontalDielectric_globalWire: 1.106e-3
+ FO_tech_peripheral: 2.622e-6
+ eps_cap_tech_peripheral: 2.001e-6
+ M_tech_peripheral: 6.670e-7
+
+ now with write latency
+ top write sensitivities (absolute value) (normalized to current parameter value)
+ capFringe_tech_peripheral: 9.619e-2
+ tgox_tech_peripheral: 2.838e-1
+ barrierThickness_localWire: 9.242e-4
+ wirePitch_localWire: -5.912e-3
+ phyGateLength_tech_peripheral: -1.204e-3
+ ildThickness_localWire: -4.427e-3
+ barrierThickness_globalWire: 2.178e-5
+ wirePitch_globalWire: -4.994e-4
+ Lext_tech_peripheral: -5.281e-7
+ Wg_tech_peripheral: 8.679e-7
+ ildThickness_globalWire: -1.172e-5
+ effectiveResistanceMultiplier_tech_peripheral: 2.838e-1
+ vdd_tech_peripheral: 2.430e-1
+ eps_gox_tech_peripheral: -2.838e-1
+ effectiveElectronMobility_tech_peripheral: 1.205e-3
+ aspectRatio_localWire: 6.325e-2
+ pnSizeRatio_tech_peripheral: 5.969e-2
+ mD_fac_tech_peripheral: -9.680e-3
+ horizontalDielectric_localWire: 6.810e-2
+ aspectRatio_globalWire: -9.839e-5
+ horizontalDielectric_globalWire: 1.503e-4
+ FO_tech_peripheral: 6.919e-7
+ eps_cap_tech_peripheral: 5.281e-7
+ M_tech_peripheral: 1.760e-7
+
+================================================================================
+STEP 3: Running IPOPT Optimization
+================================================================================
+
+printing values that changed during optimization:
+
+vdd_tech_peripheral: 1.5 -> 0.9520033379892769
+capFringe_tech_peripheral: 2.5e-10 -> 1.8531647551641496e-10
+effectiveHoleMobility_tech_peripheral: 0.008 -> 0.008082640710559866
+pnSizeRatio_tech_peripheral: 2.45 -> 2.0086147637514458
+horizontalDielectric_localWire: 3.75 -> 3.3251967318832714
+wirePitch_localWire: 4.5e-07 -> 4.779005284128929e-07
+aspectRatio_localWire: 2.4 -> 2.1863597235767442
+ildThickness_localWire: 1e-06 -> 1.012021417997022e-06
+
+printing non-base values that changed during optimization:
+
+current_off_nmos (uA/um): 0.00153296499488423 -> 0.00153296470536651
+current_off_pmos (uA/um): 0.000485810837850002 -> 0.000485809979689344
+current_on_nmos (uA/um): 180.419838306688 -> 167.784577166737
+current_on_pmos (uA/um): 59.7601043896216 -> 58.7670496949017
+read_latency (s): 3.056445336755149e-09 -> 2.0376302022482266e-09
+
+================================================================================
+HYBRID WORKFLOW COMPLETED SUCCESSFULLY!
+================================================================================
+

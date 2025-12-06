@@ -1,0 +1,9 @@
+[submodule "destiny_3d_cache"]
+	path = src/destiny_3d_cache
+	url = https://github.com/sparsh0mittal/destiny_3d_cache.git
+[submodule "destiny_3d_cache_python"]
+	path = src/destiny_3d_cache_python
+	url = https://github.com/patrickmcewen/destiny_3d_cache_python.git
+[submodule "src/tech_codesign_v0"]
+	path = src/tech_codesign_v0
+	url = https://github.com/kjstanford/tech_codesign_v0.git
